@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Topaz · Connect the Core</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="viewport">
+  <div id="stage">
+    <img class="bg" src="assets/common/bg.jpg" alt="">
+
+    <!-- Logo (siempre visible) -->
+    <img id="logo" class="abs" src="assets/common/logo.png" alt="Topaz">
+
+    <!-- INICIO -->
+    <section id="screen-start" class="screen">
+      <img id="start-title" class="abs title-img" alt="">
+      <div id="btn-start" class="abs btn big"><span></span></div>
+    </section>
+
+    <!-- JUEGO -->
+    <section id="screen-game" class="screen">
+      <img id="game-title" class="abs title-img" alt="">
+      <div id="hud-time" class="abs hud">
+        <svg class="ico" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 9v7.5l5 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="txt"><span class="lbl" id="lbl-time"></span><span class="val" id="val-time">00:45</span></div>
+      </div>
+      <div id="hud-points" class="abs hud">
+        <svg class="ico" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4.5l3.4 7 7.6 1.1-5.5 5.4 1.3 7.6L16 21.9l-6.8 3.7 1.3-7.6L5 12.6l7.6-1.1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        <div class="txt"><span class="lbl" id="lbl-points"></span><span class="val" id="val-points">0</span></div>
+      </div>
+      <div id="taps" class="abs"><span class="k" id="lbl-taps"></span><span class="n" id="val-taps">0</span></div>
+      <div id="grid-frame" class="abs"></div>
+      <div id="grid" class="abs"></div>
+    </section>
+
+    <!-- VICTORIA: título del modo + tarjeta con la frase de ese modo -->
+    <section id="screen-win" class="screen">
+      <div id="confetti"></div>
+      <img id="win-title" class="abs title-img" alt="">
+      <img id="win-card" class="abs" alt="">
+      <div id="win-stats" class="abs">
+        <span class="k" id="win-points-label"></span>
+        <span class="v" id="win-points">0</span>
+        <span class="s"><span id="win-time-label"></span> <b id="win-time">00:00</b></span>
+      </div>
+      <div id="btn-again" class="abs btn big"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v4.5h-4.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span></span></div>
+    </section>
+
+    <!-- TIEMPO O TOQUES AGOTADOS -->
+    <section id="screen-lose" class="screen">
+      <img id="lose-title" class="abs title-img" alt="">
+      <img id="lose-card" class="abs" alt="">
+      <div id="btn-retry" class="abs btn big"><svg class="bi" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v4.5h-4.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span></span></div>
+    </section>
+
+    <div id="loading"><div class="spin"></div></div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

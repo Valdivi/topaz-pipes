@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Editor de layout 500x1000</title>
+<style>
+  :root { --bg:#1b1f2a; --panel:#242a38; --line:#36405a; --txt:#e8ecf6; --mute:#8d97b3; --acc:#3da5ff; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--txt); font:13px/1.4 system-ui, sans-serif; }
+  #app { display:flex; height:100vh; }
+  #work { flex:1; overflow:auto; padding:20px; display:flex; justify-content:center; align-items:flex-start; }
+  #wrap { position:relative; flex:none; }
+  #stage { position:absolute; left:0; top:0; width:500px; height:1000px; transform-origin:0 0;
+           background:#f2f6fb; outline:2px solid #000; overflow:hidden; touch-action:none; }
+  #bgimg { position:absolute; inset:0; width:100%; height:100%; object-fit:fill; pointer-events:none; opacity:.4; display:none; }
+  #grid { position:absolute; inset:0; pointer-events:none; display:none;
+          background-image: linear-gradient(to right, rgba(0,0,0,.12) 1px, transparent 1px),
+                            linear-gradient(to bottom, rgba(0,0,0,.12) 1px, transparent 1px); }
+  .box { position:absolute; border:2px solid; display:flex; align-items:flex-start; justify-content:flex-start;
+         font:600 11px system-ui; padding:2px 4px; cursor:move; user-select:none; touch-action:none; overflow:hidden; }
+  .box.sel { outline:2px dashed #000; outline-offset:1px; z-index:5; }
+  .box .h { position:absolute; right:0; bottom:0; width:14px; height:14px; background:#000; cursor:nwse-resize; opacity:.7; }
+  .box .dim { position:absolute; left:4px; bottom:2px; font-weight:400; font-size:10px; opacity:.7; }
+  #panel { width:320px; background:var(--panel); border-left:1px solid var(--line); overflow-y:auto; padding:14px; }
+  h3 { margin:16px 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--mute); }
+  h3:first-child { margin-top:0; }
+  .row { display:flex; gap:6px; margin-bottom:6px; align-items:center; }
+  .row label { width:46px; color:var(--mute); }
+  input[type=text], input[type=number] { width:100%; background:#171c27; border:1px solid var(--line); color:var(--txt); padding:6px 8px; border-radius:6px; }
+  input[type=color] { width:40px; height:30px; border:0; background:none; padding:0; }
+  button { background:#303a52; color:var(--txt); border:1px solid var(--line); padding:7px 10px; border-radius:6px; cursor:pointer; font:inherit; }
+  button:hover { background:#3b4766; }
+  button.pri { background:var(--acc); color:#04121f; border-color:var(--acc); font-weight:700; }
+  button.dan { color:#ff8a8a; }
+  .btns { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; }
+  #list .it { display:flex; justify-content:space-between; gap:8px; padding:6px 8px; border-radius:6px; cursor:pointer; border:1px solid transparent; }
+  #list .it:hover { background:#2d364c; }
+  #list .it.sel { border-color:var(--acc); background:#2a3550; }
+  #list .it small { color:var(--mute); }
+  .chk { display:flex; gap:6px; align-items:center; margin:4px 0; }
+  #status { color:var(--mute); font-size:12px; margin-top:6px; min-height:16px; }
+  textarea { width:100%; height:110px; background:#171c27; color:var(--txt); border:1px solid var(--line); border-radius:6px; padding:6px; font:11px monospace; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="work"><div id="wrap"><div id="stage"></div></div></div>
+
+  <div id="panel">
+    <h3>Nueva casilla</h3>
+    <div class="row"><label>Nombre</label><input type="text" id="n_name" value="casilla"></div>
+    <div class="row"><label>Ancho</label><input type="number" id="n_w" value="90"><label style="width:40px">Alto</label><input type="number" id="n_h" value="90"></div>
+    <div class="row"><label>X</label><input type="number" id="n_x" value="0"><label style="width:40px">Y</label><input type="number" id="n_y" value="0"></div>
+    <div class="btns"><button class="pri" id="btnAdd">Crear casilla</button></div>
+
+    <h3>Seleccionada</h3>
+    <div id="props" style="display:none">
+      <div class="row"><label>Nombre</label><input type="text" id="p_name"></div>
+      <div class="row"><label>X</label><input type="number" id="p_x"><label style="width:40px">Y</label><input type="number" id="p_y"></div>
+      <div class="row"><label>Ancho</label><input type="number" id="p_w"><label style="width:40px">Alto</label><input type="number" id="p_h"></div>
+      <div class="row"><label>Color</label><input type="color" id="p_color"></div>
+      <div class="btns"><button id="btnDup">Duplicar</button><button class="dan" id="btnDel">Eliminar</button></div>
+      <div style="color:var(--mute);font-size:12px">Flechas = mover 1 px (Shift = 10). Supr = eliminar.</div>
+    </div>
+    <div id="noSel" style="color:var(--mute)">Haz clic en una casilla.</div>
+
+    <h3>Ayudas</h3>
+    <div class="chk"><input type="checkbox" id="snap"><label for="snap">Imán a la cuadrícula</label>
+      <input type="number" id="snapSize" value="5" style="width:60px"> px</div>
+    <div class="chk"><input type="checkbox" id="showGrid"><label for="showGrid">Mostrar cuadrícula</label></div>
+    <div class="row"><label>Zoom</label><input type="range" id="zoom" min="30" max="150" value="80" style="width:100%"></div>
+    <div class="row"><label>Fondo</label><input type="file" id="bgfile" accept="image/*" style="width:100%"></div>
+    <div class="row"><label>Opac.</label><input type="range" id="bgop" min="0" max="100" value="40" style="width:100%"></div>
+    <div style="color:var(--mute);font-size:12px">Sube tu captura como referencia para calcar. No se incluye al exportar.</div>
+
+    <h3>Casillas (<span id="count">0</span>)</h3>
+    <div id="list"></div>
+
+    <h3>Guardar / cargar</h3>
+    <div class="btns">
+      <button class="pri" id="btnHTML">Guardar HTML con posiciones</button>
+      <button id="btnJSON">Descargar JSON</button>
+      <button id="btnCopy">Copiar JSON</button>
+    </div>
+    <div class="btns">
+      <button id="btnSuggest">Cargar layout sugerido</button>
+      <button class="dan" id="btnClear">Borrar todo</button>
+    </div>
+    <textarea id="io" placeholder="Pega aquí un JSON y pulsa Importar"></textarea>
+    <div class="btns" style="margin-top:6px"><button id="btnImport">Importar JSON</button></div>
+    <div id="status"></div>
+  </div>
+</div>
+
+<script id="layoutData" type="application/json">{"screen": {"width": 500, "height": 1000}, "savedAt": 1791740946000, "boxes": [{"name": "logo", "x": 125, "y": 80, "w": 247.1503, "h": 85.7527, "color": "#3da5ff"}, {"name": "titulo", "x": 42, "y": 225, "w": 422.6142, "h": 113.6779, "color": "#ff9f43"}, {"name": "hud-tiempo", "x": 83, "y": 370, "w": 145, "h": 60, "color": "#e74c3c"}, {"name": "hud-puntos", "x": 279, "y": 371, "w": 145, "h": 60, "color": "#a77bff"}, {"name": "grilla", "x": 42, "y": 465, "w": 425, "h": 425, "color": "#1abc9c"}, {"name": "origen-banco", "x": 42.0, "y": 465.0, "w": 85.0, "h": 85.0, "color": "#ff6b9d"}, {"name": "celda-0-1", "x": 127.0, "y": 465.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-0-2", "x": 212.0, "y": 465.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-0-3", "x": 297.0, "y": 465.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-0-4", "x": 382.0, "y": 465.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-1-0", "x": 42.0, "y": 550.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-1-1", "x": 127.0, "y": 550.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-1-2", "x": 212.0, "y": 550.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-1-3", "x": 297.0, "y": 550.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-1-4", "x": 382.0, "y": 550.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-2-0", "x": 42.0, "y": 635.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-2-1", "x": 127.0, "y": 635.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-2-2", "x": 212.0, "y": 635.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-2-3", "x": 297.0, "y": 635.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-2-4", "x": 382.0, "y": 635.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-3-0", "x": 42.0, "y": 720.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-3-1", "x": 127.0, "y": 720.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-3-2", "x": 212.0, "y": 720.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-3-3", "x": 297.0, "y": 720.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-3-4", "x": 382.0, "y": 720.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-4-0", "x": 42.0, "y": 805.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-4-1", "x": 127.0, "y": 805.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-4-2", "x": 212.0, "y": 805.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "celda-4-3", "x": 297.0, "y": 805.0, "w": 85.0, "h": 85.0, "color": "#8d97b3"}, {"name": "destino-topaz-one", "x": 382.0, "y": 805.0, "w": 85.0, "h": 85.0, "color": "#3da5ff"}]}</script>
+<script>
+const W = 500, H = 1000;
+const COLORS = ['#3da5ff','#ff9f43','#2ecc71','#e74c3c','#a77bff','#f1c40f','#1abc9c','#ff6b9d'];
+const $ = id => document.getElementById(id);
+const stage = $('stage'), wrap = $('wrap');
+let boxes = [], sel = null, scale = 0.8, uid = 1;
+
+/* ---------- persistencia ---------- */
+function data(){ return { screen:{width:W,height:H}, savedAt:Date.now(), boxes: boxes.map(({name,x,y,w,h,color})=>({name,x,y,w,h,color})) }; }
+function autosave(){ try{ localStorage.setItem('layout500x1000', JSON.stringify(data())); }catch(e){} }
+function setBoxes(arr){
+  boxes = arr.map(b => ({ id:uid++, name:b.name||'casilla', x:+b.x||0, y:+b.y||0, w:+b.w||50, h:+b.h||50, color:b.color||COLORS[0] }));
+  sel = null; render();
+}
+function status(t){ $('status').textContent = t; }
+
+/* ---------- render ---------- */
+function render(){
+  stage.querySelectorAll('.box').forEach(n=>n.remove());
+  boxes.forEach(b=>{
+    const d = document.createElement('div');
+    d.className = 'box' + (b.id===sel?' sel':'');
+    d.dataset.id = b.id;
+    d.style.cssText = `left:${b.x}px;top:${b.y}px;width:${b.w}px;height:${b.h}px;border-color:${b.color};background:${b.color}33;color:${b.color};filter:brightness(.8)`;
+    d.innerHTML = `<span>${esc(b.name)}</span><span class="dim">${b.w}×${b.h}</span><div class="h"></div>`;
+    stage.appendChild(d);
+  });
+  renderList(); syncProps(); autosave();
+}
+function renderStageOnly(){
+  boxes.forEach(b=>{
+    const d = stage.querySelector(`.box[data-id="${b.id}"]`); if(!d) return;
+    d.style.left=b.x+'px'; d.style.top=b.y+'px'; d.style.width=b.w+'px'; d.style.height=b.h+'px';
+    d.querySelector('span').textContent=b.name; d.querySelector('.dim').textContent=`${b.w}×${b.h}`;
+    d.style.borderColor=b.color; d.style.background=b.color+'33'; d.style.color=b.color;
+  });
+  renderList(); autosave();
+}
+function renderList(){
+  $('count').textContent = boxes.length;
+  $('list').innerHTML = boxes.map(b=>`<div class="it ${b.id===sel?'sel':''}" data-id="${b.id}"><span>${esc(b.name)}</span><small>${b.x},${b.y} · ${b.w}×${b.h}</small></div>`).join('');
+}
+function syncProps(){
+  const b = boxes.find(x=>x.id===sel);
+  $('props').style.display = b?'block':'none'; $('noSel').style.display = b?'none':'block';
+  if(!b) return;
+  $('p_name').value=b.name; $('p_x').value=b.x; $('p_y').value=b.y; $('p_w').value=b.w; $('p_h').value=b.h; $('p_color').value=b.color;
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function select(id){
+  sel = id;
+  stage.querySelectorAll('.box').forEach(n=>n.classList.toggle('sel', +n.dataset.id===id));
+  renderList(); syncProps();
+}
+
+/* ---------- zoom ---------- */
+function applyZoom(){
+  scale = $('zoom').value/100;
+  stage.style.transform = `scale(${scale})`;
+  wrap.style.width = W*scale+'px'; wrap.style.height = H*scale+'px';
+}
+$('zoom').oninput = applyZoom;
+
+/* ---------- arrastre y resize ---------- */
+const snapV = v => $('snap').checked ? Math.round(v/Math.max(1,+$('snapSize').value||1))*Math.max(1,+$('snapSize').value||1) : Math.round(v);
+let drag = null;
+stage.addEventListener('pointerdown', e=>{
+  const el = e.target.closest('.box');
+  if(!el){ select(null); return; }
+  const b = boxes.find(x=>x.id===+el.dataset.id);
+  select(b.id);
+  drag = { b, mode: e.target.classList.contains('h')?'resize':'move', sx:e.clientX, sy:e.clientY, ox:b.x, oy:b.y, ow:b.w, oh:b.h };
+  stage.setPointerCapture(e.pointerId); e.preventDefault();
+});
+stage.addEventListener('pointermove', e=>{
+  if(!drag) return;
+  const dx=(e.clientX-drag.sx)/scale, dy=(e.clientY-drag.sy)/scale, b=drag.b;
+  if(drag.mode==='move'){ b.x=snapV(drag.ox+dx); b.y=snapV(drag.oy+dy); }
+  else { b.w=Math.max(10,snapV(drag.ow+dx)); b.h=Math.max(10,snapV(drag.oh+dy)); }
+  renderStageOnly(); syncProps();
+});
+stage.addEventListener('pointerup', ()=>{ drag=null; });
+
+/* ---------- teclado ---------- */
+document.addEventListener('keydown', e=>{
+  if(/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  const b = boxes.find(x=>x.id===sel); if(!b) return;
+  const s = e.shiftKey?10:1;
+  if(e.key==='ArrowLeft') b.x-=s; else if(e.key==='ArrowRight') b.x+=s;
+  else if(e.key==='ArrowUp') b.y-=s; else if(e.key==='ArrowDown') b.y+=s;
+  else if(e.key==='Delete'||e.key==='Backspace'){ del(); return; }
+  else return;
+  e.preventDefault(); renderStageOnly(); syncProps();
+});
+
+/* ---------- acciones ---------- */
+function add(o){
+  const b = { id:uid++, name:o.name, x:o.x, y:o.y, w:o.w, h:o.h, color:COLORS[boxes.length%COLORS.length] };
+  boxes.push(b); render(); select(b.id);
+}
+function del(){ boxes = boxes.filter(b=>b.id!==sel); sel=null; render(); }
+$('btnAdd').onclick = ()=> add({ name:$('n_name').value||'casilla', w:+$('n_w').value||90, h:+$('n_h').value||90, x:+$('n_x').value||0, y:+$('n_y').value||0 });
+$('btnDel').onclick = del;
+$('btnDup').onclick = ()=>{ const b=boxes.find(x=>x.id===sel); if(b) add({name:b.name+'-copia',x:b.x+10,y:b.y+10,w:b.w,h:b.h}); };
+$('list').onclick = e=>{ const it=e.target.closest('.it'); if(it) select(+it.dataset.id); };
+[['p_name','name'],['p_x','x'],['p_y','y'],['p_w','w'],['p_h','h'],['p_color','color']].forEach(([id,k])=>{
+  $(id).oninput = ()=>{ const b=boxes.find(x=>x.id===sel); if(!b) return;
+    b[k] = (k==='name'||k==='color') ? $(id).value : (+$(id).value||0); renderStageOnly(); };
+});
+$('showGrid').onchange = updGrid; $('snapSize').oninput = updGrid;
+function updGrid(){
+  const g=$('grid'); g.style.display=$('showGrid').checked?'block':'none';
+  const s=Math.max(1,+$('snapSize').value||5); g.style.backgroundSize=`${s}px ${s}px`;
+}
+$('bgfile').onchange = e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader(); r.onload=()=>{ $('bgimg').src=r.result; $('bgimg').style.display='block'; }; r.readAsDataURL(f);
+};
+$('bgop').oninput = ()=> $('bgimg').style.opacity = $('bgop').value/100;
+
+/* ---------- layout sugerido ---------- */
+$('btnSuggest').onclick = ()=>{
+  const L = [
+    {name:'logo',x:150,y:30,w:200,h:60},
+    {name:'titulo',x:50,y:115,w:400,h:40},
+    {name:'hud-nivel',x:30,y:175,w:140,h:60},
+    {name:'hud-tiempo',x:180,y:175,w:140,h:60},
+    {name:'hud-puntos',x:330,y:175,w:140,h:60},
+    {name:'instruccion',x:50,y:255,w:400,h:50},
+    {name:'grilla',x:25,y:330,w:450,h:450},
+    {name:'origen-banco',x:25,y:330,w:90,h:90},
+    {name:'destino-topaz-one',x:385,y:690,w:90,h:90},
+    {name:'btn-reiniciar',x:90,y:880,w:70,h:70},
+    {name:'btn-pista',x:215,y:880,w:70,h:70},
+    {name:'btn-config',x:340,y:880,w:70,h:70},
+  ];
+  setBoxes(L.map((b,i)=>({...b,color:COLORS[i%COLORS.length]}))); status('Layout sugerido cargado.');
+};
+$('btnClear').onclick = ()=>{ if(confirm('¿Borrar todas las casillas?')){ setBoxes([]); } };
+
+/* ---------- exportar / importar ---------- */
+function download(name, text, type){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+$('btnJSON').onclick = ()=>{ download('layout-500x1000.json', JSON.stringify(data(),null,2), 'application/json'); status('JSON descargado.'); };
+$('btnCopy').onclick = async ()=>{
+  const t=JSON.stringify(data(),null,2); $('io').value=t;
+  try{ await navigator.clipboard.writeText(t); status('JSON copiado.'); }catch(e){ $('io').select(); status('Cópialo del cuadro de texto.'); }
+};
+$('btnImport').onclick = ()=>{
+  try{ const j=JSON.parse($('io').value); setBoxes(j.boxes||j); status('Importado.'); }
+  catch(e){ status('JSON inválido.'); }
+};
+$('btnHTML').onclick = ()=>{
+  const clone = document.documentElement.cloneNode(true);
+  clone.querySelector('#stage').innerHTML = '<img id="bgimg"><div id="grid"></div>';
+  clone.querySelector('#stage').removeAttribute('style');
+  clone.querySelector('#wrap').removeAttribute('style');
+  clone.querySelector('#layoutData').textContent = JSON.stringify(data());
+  download('layout-editor.html', '<!doctype html>\n'+clone.outerHTML, 'text/html');
+  status('HTML guardado con las posiciones dentro.');
+};
+
+/* ---------- inicio ---------- */
+stage.insertAdjacentHTML('afterbegin','<img id="bgimg"><div id="grid"></div>');
+applyZoom(); updGrid();
+(function init(){
+  let embedded = {savedAt:0,boxes:[]};
+  try{ embedded = JSON.parse($('layoutData').textContent); }catch(e){}
+  let local = null;
+  try{ local = JSON.parse(localStorage.getItem('layout500x1000')); }catch(e){}
+  if(local && local.boxes && local.boxes.length && (local.savedAt||0) > (embedded.savedAt||0)) setBoxes(local.boxes);
+  else if(embedded.boxes && embedded.boxes.length) setBoxes(embedded.boxes);
+  else $('btnSuggest').click();
+})();
+</script>
+</body>
+</html>
